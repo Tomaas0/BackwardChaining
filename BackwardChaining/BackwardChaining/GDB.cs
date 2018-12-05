@@ -38,6 +38,7 @@ namespace BackwardChaining
         public List<Projekcija> Projekcijos { get; set; }
         public List<char> InitFaktai { get; set; }
         public List<char> Faktai { get; set; }
+        public List<int> FaktaiWhenAdded { get; set; }
         public List<char> VisiFaktai
         {
             get
@@ -48,17 +49,23 @@ namespace BackwardChaining
                 return x;
             }
         }
+        public char InitTikslas { get; set; }
         public char Tikslas { get; set; }
-        public char TempTikslas { get; set; }
+        public List<char> Tikslai { get; set; }
 
         public List<Projekcija> Kelias { get; set; }
-        public String FaktaiToString { get { return String.Format("{0} ir {1}", CharListToString(InitFaktai), CharListToString(Faktai)); } }
+        public List<int> KeliasWhenAdded { get; set; }
+        public String FaktaiToString { get { if (Faktai.Count == 0) return CharListToString(InitFaktai);
+                else return String.Format("{0} ir {1}", CharListToString(InitFaktai), CharListToString(Faktai)); } }
         public GDB(string inputFileName)
         {
             Projekcijos = new List<Projekcija>();
             InitFaktai = new List<char>();
+            Tikslai = new List<char>();
             Faktai = new List<char>();
+            FaktaiWhenAdded = new List<int>();
             Kelias = new List<Projekcija>();
+            KeliasWhenAdded = new List<int>();
             StreamReader file = new StreamReader(inputFileName);
             TestName = file.ReadLine();
             file.ReadLine();
@@ -87,11 +94,12 @@ namespace BackwardChaining
             line = file.ReadLine();
             line = file.ReadLine();
             line = file.ReadLine();
-            Tikslas = line.ElementAt(0);
+            InitTikslas = line.ElementAt(0);
+            Tikslai.Add(InitTikslas);
             file.Close();
         }
 
-        private String CharListToString(List<char> list)
+        public String CharListToString(List<char> list)
         {
             string output;
             if (list.Count > 0)

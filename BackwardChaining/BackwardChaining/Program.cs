@@ -12,6 +12,8 @@ namespace BackwardChaining
         static void Main(string[] args)
         {
             GDB db = new GDB(ConfigurationManager.AppSettings["InputFileName"]);
+
+            BackwardChainingJob.Run(db);
         }
     }
 }
