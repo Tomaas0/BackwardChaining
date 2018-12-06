@@ -9,8 +9,31 @@ namespace BackwardChaining
 {
     public static class BackwardChainingJob
     {
-        public static void Run(GDB db)
+        #region Kintamieji
+        
+        static int gylis;
+        static List<Char> Tikslai = new List<Char>();
+        static GDB db;
+
+        #endregion
+        private static void Gryzti(Boolean Success = false)
         {
+            Change change = db.Changes.Pop();
+            Tikslai = change.SeniTikslai;
+            db.Faktai = change.SeniFaktai;
+            //change.PanaudotaProjekcija.Flag = change.ProjekcijosSenasFlag;
+
+            if (!Success)
+            {
+                while(db.Changes.Peek().Gylis >= gylis)
+                {
+                    db.Changes.Pop();
+                }
+            }
+        }
+        public static void Run(GDB Db)
+        {
+            db = Db;
             #region Protokolas 1 dalis
             string output;
             StreamWriter file = new StreamWriter(String.Format("{0} protokolas.txt", db.TestName), false);
@@ -46,77 +69,54 @@ namespace BackwardChaining
             file.WriteLine("2 DALIS. Vykdymas");
             file.WriteLine("");
             int iCount = 0; //Iteraciju skaitliukas
-            int gylis = 0;
+            gylis = 0;
             file.AutoFlush = true;//NUIMTI SITAAAAAAAA
             bool done = false;
+            Tikslai.Add(db.Tikslas);
             while (!done)
             {
                 iCount++;
                 String line = "";
-                db.Tikslas = db.Tikslai.ElementAt(0);
+                Char Tikslas = Tikslai.ElementAt(0);
                 line += String.Format("  {0}) ", iCount.ToString());
                 for(int i = 0; i < gylis; i++)
                 {
                     line += "-";
                 }
-                line += String.Format("Tikslas {0}. ", db.Tikslas);
+                line += String.Format("Tikslas {0}. ", Tikslas);
+                
+                if (db.Changes.Count > 0 && Tikslai.Equals(db.Changes.Peek().NaujiTikslai)) //Equals neveikia
+                {
+                    db.Faktai.Add(Tikslas);
+                    line += String.Format("Faktas(dabar gautas). Faktai {0}.", db.FaktaiToString);
+                    line += " Grįžtame, sėkmė.";
+                    gylis--;
 
-                List<char> laikinasList = new List<char>(db.Tikslai);
-                laikinasList.RemoveAt(0);
-                if (laikinasList.Contains(db.Tikslas))
+                    Gryzti(true);
+                }
+                else if (db.Changes.Select(a => a.IeskotasTikslas).Contains(Tikslas))
                 {
                     line += String.Format("Ciklas. Grįžtame, FAIL.");
                     gylis--;
 
-                    List<int> remove = new List<int>();
-                    for (int i = 0; i < db.Kelias.Count; i++)
-                    {
-                        if (db.KeliasWhenAdded.ElementAt(i) >= gylis)
-                        {
-                            remove.Add(i);
-                        }
-                    }
-                    remove.Reverse();
-                    foreach (int i in remove)
-                    {
-                        db.Kelias.RemoveAt(i);
-                        db.KeliasWhenAdded.RemoveAt(i);
-                    }
-
-                    remove = new List<int>();
-                    for (int i = 0; i < db.Faktai.Count; i++)
-                    {
-                        if (db.FaktaiWhenAdded.ElementAt(i) >= gylis)
-                        {
-                            remove.Add(i);
-                        }
-                    }
-                    remove.Reverse();
-                    foreach (int i in remove)
-                    {
-                        db.Faktai.RemoveAt(i);
-                        db.FaktaiWhenAdded.RemoveAt(i);
-                    }
-
-                    db.Tikslai.RemoveAt(0);
+                    Gryzti();
+                    
                 }
-                else if (db.InitFaktai.Contains(db.Tikslas))
+                else if (db.InitFaktai.Contains(Tikslas))
                 {
                     line += String.Format("Faktas(duotas), nes faktai {0}.", db.FaktaiToString);
-                    db.Tikslai.RemoveAt(0);
-                        line += " Grįžtame, sėkmė.";
-                        db.Faktai.Add(db.Tikslai.ElementAt(0));
-                        db.FaktaiWhenAdded.Add(gylis);
-                        gylis--;
+                    line += " Grįžtame, sėkmė.";
+                    gylis--;
+
+                    Gryzti(true);
                 }
                 else if (db.Faktai.Contains(db.Tikslas))
                 {
-                    line += String.Format("Faktas(dabar gautas). Faktai {0}.", db.FaktaiToString);
-                    db.Tikslai.RemoveAt(0);
-                    if(db.Tikslai.Count == 0)
-                    {
-                        done = true;
-                    }
+                    line += String.Format("Faktas(buvo gautas). Faktai {0}.", db.FaktaiToString);
+                    line += " Grįžtame, sėkmė.";
+                    gylis--;
+
+                    Gryzti(true);
                 }
                 else
                 {
@@ -127,14 +127,26 @@ namespace BackwardChaining
                         {
                             if (p.Flag == 0)
                             {
-                                if (p.Rezultatas == db.Tikslas)
+                                if (p.Rezultatas == Tikslas)
                                 {
+                                    Change change = new Change();
+                                    change.ProjekcijosSenasFlag = p.Flag;
+                                    change.SeniTikslai.AddRange(Tikslai);
+                                    change.SeniFaktai.AddRange(db.Faktai);
                                     line += String.Format("Randame {0}. Nauji tikslai {1}.", p, db.CharListToString(p.Reikalavimai));
-                                    db.Tikslai.InsertRange(0, p.Reikalavimai);
+                                    Tikslai.RemoveAt(0);
+                                    Tikslai.InsertRange(0, p.Reikalavimai);
                                     radomeTinkamaProjekcija = true;
                                     p.Flag = 1;
                                     db.Kelias.Add(p);
-                                    db.KeliasWhenAdded.Add(gylis);
+
+                                    change.IeskotasTikslas = Tikslas;
+                                    change.NaujiTikslai.AddRange(Tikslai);
+                                    change.PanaudotaProjekcija = p;
+                                    change.ProjekcijosNaujasFlag = p.Flag;
+                                    change.Gylis = gylis;
+                                    db.Changes.Push(change);
+
                                     gylis++;
                                 }
                             }
@@ -145,37 +157,7 @@ namespace BackwardChaining
                         line += String.Format("Nėra taisyklių jo išvedimui. Grįžtame, FAIL.");
                         gylis--;
 
-                        List<int> remove = new List<int>();
-                        for (int i = 0; i < db.Kelias.Count; i++)
-                        {
-                            if (db.KeliasWhenAdded.ElementAt(i) >= gylis)
-                            {
-                                remove.Add(i);
-                            }
-                        }
-                        remove.Reverse();
-                        foreach (int i in remove)
-                        {
-                            db.Kelias.RemoveAt(i);
-                            db.KeliasWhenAdded.RemoveAt(i);
-                        }
-
-                        remove = new List<int>();
-                        for (int i = 0; i < db.Faktai.Count; i++)
-                        {
-                            if (db.FaktaiWhenAdded.ElementAt(i) >= gylis)
-                            {
-                                remove.Add(i);
-                            }
-                        }
-                        remove.Reverse();
-                        foreach (int i in remove)
-                        {
-                            db.Faktai.RemoveAt(i);
-                            db.FaktaiWhenAdded.RemoveAt(i);
-                        }
-
-                        db.Tikslai.RemoveAt(0);
+                        Gryzti();
                     }
                 }
                 file.WriteLine(line);
