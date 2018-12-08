@@ -22,7 +22,8 @@ namespace BackwardChaining
         {
             Change change = db.Changes.Pop();
             Tikslai = change.SeniTikslai;
-            if(!Success) db.Faktai = change.SeniFaktai;
+            if (!Success) db.Faktai = change.SeniFaktai;
+            if (!Success) db.Kelias = change.SeniKeliai;
             //if(!Success) change.PanaudotaProjekcija.Flag = change.ProjekcijosSenasFlag;
 
             /*if (!Success)
@@ -125,6 +126,7 @@ namespace BackwardChaining
 
                             Gryzti(true);
                             sekme = true;
+                            db.Kelias.Add(lastChange.PanaudotaProjekcija);
                         }
                     }
                 }
@@ -144,6 +146,8 @@ namespace BackwardChaining
 
                     Gryzti(true);
                     sekme = true;
+
+                    db.Kelias.Add(lastChange.PanaudotaProjekcija);
                 }
                 else if (db.Faktai.Contains(Tikslas))
                 {
@@ -153,6 +157,8 @@ namespace BackwardChaining
 
                     Gryzti(true);
                     sekme = true;
+
+                    db.Kelias.Add(lastChange.PanaudotaProjekcija);
                 }
                 else
                 {
@@ -171,13 +177,13 @@ namespace BackwardChaining
                                         change.ProjekcijuSeniFlag.Add(pro.Flag);
                                     }
                                     change.SeniTikslai.AddRange(Tikslai);
+                                    change.SeniKeliai.AddRange(db.Kelias);
                                     change.SeniFaktai.AddRange(db.Faktai);
                                     line += String.Format("Randame {0}. Nauji tikslai {1}.", p, db.CharListToString(p.Reikalavimai));
                                     Tikslai.RemoveAt(0);
                                     Tikslai.InsertRange(0, p.Reikalavimai);
                                     radomeTinkamaProjekcija = true;
                                     p.Flag = 1;
-                                    db.Kelias.Add(p);
 
                                     change.IeskotasTikslas = Tikslas;
                                     change.NaujiTikslai.AddRange(Tikslai);

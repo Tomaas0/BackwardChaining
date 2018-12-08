@@ -83,6 +83,15 @@ namespace BackwardChaining
                 return projekcijuNaujiFlag;
             }
         }
+        private List<Projekcija> seniKeliai;
+        public List<Projekcija> SeniKeliai
+        {
+            get
+            {
+                if (seniKeliai == null) seniKeliai = new List<Projekcija>();
+                return seniKeliai;
+            }
+        }
         public int Gylis { get; set; }
     }
 
