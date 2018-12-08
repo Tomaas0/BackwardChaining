@@ -65,8 +65,24 @@ namespace BackwardChaining
             }
         }
         public Projekcija PanaudotaProjekcija { get; set; }
-        public int ProjekcijosSenasFlag { get; set; }
-        public int ProjekcijosNaujasFlag { get; set; }
+        private List<int> projekcijuSeniFlag;
+        public List<int> ProjekcijuSeniFlag
+        {
+            get
+            {
+                if (projekcijuSeniFlag == null) projekcijuSeniFlag = new List<int>();
+                return projekcijuSeniFlag;
+            }
+        }
+        private List<int> projekcijuNaujiFlag;
+        public List<int> ProjekcijuNaujiFlag
+        {
+            get
+            {
+                if (projekcijuNaujiFlag == null) projekcijuNaujiFlag = new List<int>();
+                return projekcijuNaujiFlag;
+            }
+        }
         public int Gylis { get; set; }
     }
 

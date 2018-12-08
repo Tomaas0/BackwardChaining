@@ -10,7 +10,9 @@ namespace BackwardChaining
     public static class BackwardChainingJob
     {
         #region Kintamieji
-        
+
+        static Change lastChange;
+        static Boolean sekme;
         static int gylis;
         static List<Char> Tikslai = new List<Char>();
         static GDB db;
@@ -20,16 +22,17 @@ namespace BackwardChaining
         {
             Change change = db.Changes.Pop();
             Tikslai = change.SeniTikslai;
-            db.Faktai = change.SeniFaktai;
-            //change.PanaudotaProjekcija.Flag = change.ProjekcijosSenasFlag;
+            if(!Success) db.Faktai = change.SeniFaktai;
+            //if(!Success) change.PanaudotaProjekcija.Flag = change.ProjekcijosSenasFlag;
 
-            if (!Success)
+            /*if (!Success)
             {
                 while(db.Changes.Peek().Gylis >= gylis)
                 {
                     db.Changes.Pop();
                 }
-            }
+            }*/
+            lastChange = change;
         }
         public static void Run(GDB Db)
         {
@@ -73,6 +76,7 @@ namespace BackwardChaining
             file.AutoFlush = true;//NUIMTI SITAAAAAAAA
             bool done = false;
             Tikslai.Add(db.Tikslas);
+            sekme = false;
             while (!done)
             {
                 iCount++;
@@ -85,14 +89,44 @@ namespace BackwardChaining
                 }
                 line += String.Format("Tikslas {0}. ", Tikslas);
                 
-                if (db.Changes.Count > 0 && Tikslai.Equals(db.Changes.Peek().NaujiTikslai)) //Equals neveikia
-                {
-                    db.Faktai.Add(Tikslas);
-                    line += String.Format("Faktas(dabar gautas). Faktai {0}.", db.FaktaiToString);
-                    line += " Grįžtame, sėkmė.";
-                    gylis--;
 
-                    Gryzti(true);
+                if (sekme)
+                {
+                    var a = lastChange.NaujiTikslai.Intersect(lastChange.SeniTikslai).ToList();
+                    var tikslasToCheck = Tikslai.Count > 1 ? Tikslai.ElementAt(1) : '`';
+                    if (lastChange.NaujiTikslai.Intersect(lastChange.SeniTikslai).ToList().Contains(tikslasToCheck))
+                    {
+                        db.Faktai.Add(Tikslas);
+                        Tikslai.RemoveAt(0);
+                        line += String.Format("Faktas(dabar gautas). Faktai {0}.", db.FaktaiToString);
+                        line += " Grįžtame, sėkmė.";
+
+                        sekme = false;
+                        
+                        for(int i = 0; i < db.Projekcijos.Count; i++)
+                        {
+                            db.Projekcijos.ElementAt(i).Flag = db.Changes.Peek().ProjekcijuNaujiFlag.ElementAt(i);
+                            //db.Projekcijos.ElementAt(i).Flag = lastChange.ProjekcijuSeniFlag.ElementAt(i);
+                        }
+                    }
+                    else
+                    {
+                        db.Faktai.Add(Tikslas);
+                        line += String.Format("Faktas(dabar gautas). Faktai {0}.", db.FaktaiToString);
+                        if (db.Faktai.Contains(db.Tikslas))
+                        {
+                            line += " Sėkmė.";
+                            done = true;
+                        }
+                        else
+                        {
+                            line += " Grįžtame, sėkmė.";
+                            gylis--;
+
+                            Gryzti(true);
+                            sekme = true;
+                        }
+                    }
                 }
                 else if (db.Changes.Select(a => a.IeskotasTikslas).Contains(Tikslas))
                 {
@@ -100,7 +134,7 @@ namespace BackwardChaining
                     gylis--;
 
                     Gryzti();
-                    
+                    sekme = false;
                 }
                 else if (db.InitFaktai.Contains(Tikslas))
                 {
@@ -109,14 +143,16 @@ namespace BackwardChaining
                     gylis--;
 
                     Gryzti(true);
+                    sekme = true;
                 }
-                else if (db.Faktai.Contains(db.Tikslas))
+                else if (db.Faktai.Contains(Tikslas))
                 {
                     line += String.Format("Faktas(buvo gautas). Faktai {0}.", db.FaktaiToString);
                     line += " Grįžtame, sėkmė.";
                     gylis--;
 
                     Gryzti(true);
+                    sekme = true;
                 }
                 else
                 {
@@ -130,7 +166,10 @@ namespace BackwardChaining
                                 if (p.Rezultatas == Tikslas)
                                 {
                                     Change change = new Change();
-                                    change.ProjekcijosSenasFlag = p.Flag;
+                                    foreach (Projekcija pro in db.Projekcijos)
+                                    {
+                                        change.ProjekcijuSeniFlag.Add(pro.Flag);
+                                    }
                                     change.SeniTikslai.AddRange(Tikslai);
                                     change.SeniFaktai.AddRange(db.Faktai);
                                     line += String.Format("Randame {0}. Nauji tikslai {1}.", p, db.CharListToString(p.Reikalavimai));
@@ -143,7 +182,10 @@ namespace BackwardChaining
                                     change.IeskotasTikslas = Tikslas;
                                     change.NaujiTikslai.AddRange(Tikslai);
                                     change.PanaudotaProjekcija = p;
-                                    change.ProjekcijosNaujasFlag = p.Flag;
+                                    foreach (Projekcija pro in db.Projekcijos)
+                                    {
+                                        change.ProjekcijuNaujiFlag.Add(pro.Flag);
+                                    }
                                     change.Gylis = gylis;
                                     db.Changes.Push(change);
 
