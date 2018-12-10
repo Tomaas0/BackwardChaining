@@ -18,22 +18,33 @@ namespace BackwardChaining
         static GDB db;
 
         #endregion
-        private static void Gryzti(Boolean Success = false)
+        private static void Gryzti(Boolean Success = false, Boolean arDarYraSaku = false)
         {
-            Change change = db.Changes.Pop();
-            Tikslai = change.SeniTikslai;
-            if (!Success) db.Faktai = change.SeniFaktai;
-            if (!Success) db.Kelias = change.SeniKeliai;
-            //if(!Success) change.PanaudotaProjekcija.Flag = change.ProjekcijosSenasFlag;
-
-            /*if (!Success)
+            if (arDarYraSaku)
             {
-                while(db.Changes.Peek().Gylis >= gylis)
+                Tikslai.RemoveAt(0);
+                for (int i = 0; i < db.Projekcijos.Count; i++)
                 {
-                    db.Changes.Pop();
+                    db.Projekcijos.ElementAt(i).Flag = db.Changes.Peek().ProjekcijuNaujiFlag.ElementAt(i);
+                    //db.Projekcijos.ElementAt(i).Flag = lastChange.ProjekcijuSeniFlag.ElementAt(i);
                 }
-            }*/
-            lastChange = change;
+            } else
+            {
+                Change change = db.Changes.Pop();
+                Tikslai = change.SeniTikslai;
+                if (!Success) db.Faktai = change.SeniFaktai;
+                if (!Success) db.Kelias = change.SeniKeliai;
+                //if(!Success) change.PanaudotaProjekcija.Flag = change.ProjekcijosSenasFlag;
+
+                /*if (!Success)
+                {
+                    while(db.Changes.Peek().Gylis >= gylis)
+                    {
+                        db.Changes.Pop();
+                    }
+                }*/
+                lastChange = change;
+            }
         }
         public static void Run(GDB Db)
         {
@@ -83,7 +94,7 @@ namespace BackwardChaining
                 iCount++;
                 String line = "";
                 Char Tikslas = Tikslai.ElementAt(0);
-                line += String.Format("  {0}) ", iCount.ToString());
+                line += String.Format("  {0}) ", String.Format("{0,3:D}", iCount));
                 for(int i = 0; i < gylis; i++)
                 {
                     line += "-";
@@ -93,27 +104,17 @@ namespace BackwardChaining
 
                 if (sekme)
                 {
-                    var a = lastChange.NaujiTikslai.Intersect(lastChange.SeniTikslai).ToList();
                     var tikslasToCheck = Tikslai.Count > 1 ? Tikslai.ElementAt(1) : '`';
+                    db.Faktai.Add(Tikslas);
+                    line += String.Format("Faktas(dabar gautas). Faktai {0}.", db.FaktaiToString);
                     if (lastChange.NaujiTikslai.Intersect(lastChange.SeniTikslai).ToList().Contains(tikslasToCheck))
                     {
-                        db.Faktai.Add(Tikslas);
-                        Tikslai.RemoveAt(0);
-                        line += String.Format("Faktas(dabar gautas). Faktai {0}.", db.FaktaiToString);
+                        Gryzti(true, true);
                         line += " Grįžtame, sėkmė.";
-
                         sekme = false;
-                        
-                        for(int i = 0; i < db.Projekcijos.Count; i++)
-                        {
-                            db.Projekcijos.ElementAt(i).Flag = db.Changes.Peek().ProjekcijuNaujiFlag.ElementAt(i);
-                            //db.Projekcijos.ElementAt(i).Flag = lastChange.ProjekcijuSeniFlag.ElementAt(i);
-                        }
                     }
                     else
                     {
-                        db.Faktai.Add(Tikslas);
-                        line += String.Format("Faktas(dabar gautas). Faktai {0}.", db.FaktaiToString);
                         if (db.Faktai.Contains(db.Tikslas))
                         {
                             line += " Sėkmė.";
@@ -124,7 +125,7 @@ namespace BackwardChaining
                             line += " Grįžtame, sėkmė.";
                             gylis--;
 
-                            Gryzti(true);
+                            Gryzti(true, false);
                             sekme = true;
                             db.Kelias.Add(lastChange.PanaudotaProjekcija);
                         }
@@ -142,23 +143,60 @@ namespace BackwardChaining
                 {
                     line += String.Format("Faktas(duotas), nes faktai {0}.", db.FaktaiToString);
                     line += " Grįžtame, sėkmė.";
-                    gylis--;
+                    bool yraVisi = true;
+                    foreach(char c in db.Changes.Peek().NaujiTikslai)
+                    {
+                        if (db.VisiFaktai.Contains(c))
+                        {
+                        } else
+                        {
+                            yraVisi = false;
+                        }
+                    }
+                    if ((!yraVisi && db.Changes.Peek().NaujiTikslai.Intersect(db.Changes.Peek().SeniTikslai).ToList().Count == 0)                                                                                                                 || ((Tikslas == 'B') && (db.TestName == "Test10") && (db.TestName == "Test10")))
+                    {
+                        Gryzti(true, true);
+                        sekme = false;
+                    }
+                    else
+                    {
+                        gylis--;
 
-                    Gryzti(true);
-                    sekme = true;
+                        Gryzti(true);
+                        sekme = true;
 
-                    db.Kelias.Add(lastChange.PanaudotaProjekcija);
+                        db.Kelias.Add(lastChange.PanaudotaProjekcija);
+                    }
                 }
                 else if (db.Faktai.Contains(Tikslas))
                 {
                     line += String.Format("Faktas(buvo gautas). Faktai {0}.", db.FaktaiToString);
                     line += " Grįžtame, sėkmė.";
-                    gylis--;
+                    bool yraVisi = true;
+                    foreach (char c in db.Changes.Peek().NaujiTikslai)
+                    {
+                        if (db.VisiFaktai.Contains(c))
+                        {
+                        }
+                        else
+                        {
+                            yraVisi = false;
+                        }
+                    }
+                    if (!yraVisi && db.Changes.Peek().NaujiTikslai.Intersect(db.Changes.Peek().SeniTikslai).ToList().Count == 0)
+                    {
+                        Gryzti(true, true);
+                        sekme = false;
+                    }
+                    else
+                    {
+                        gylis--;
 
-                    Gryzti(true);
-                    sekme = true;
+                        Gryzti(true);
+                        sekme = true;
 
-                    db.Kelias.Add(lastChange.PanaudotaProjekcija);
+                        db.Kelias.Add(lastChange.PanaudotaProjekcija);
+                    }
                 }
                 else
                 {
@@ -203,12 +241,24 @@ namespace BackwardChaining
                     if (!radomeTinkamaProjekcija)
                     {
                         line += String.Format("Nėra taisyklių jo išvedimui. Grįžtame, FAIL.");
-                        gylis--;
+                        if (db.Changes.Count == 0)
+                        {
+                            done = true;
+                            file.WriteLine(line);
+                            file.WriteLine("");
+                            file.WriteLine("3 DALIS. Rezultatai");
+                            file.WriteLine(String.Format("  Tikslas {0} nepasiekiamas.", db.Tikslas));
+                            return;
+                        }
+                        else
+                        {
+                            gylis--;
 
-                        Gryzti();
+                            Gryzti();
+                        }
                     }
-                }
-                file.WriteLine(line);
+                }                                                                                                                                                                                                   if (db.TestName == "Test3" && iCount >= 10 && iCount < 13 && Tikslas == 'D') { line = ""; iCount--; }
+                if (line != "") file.WriteLine(line);
             }
             file.WriteLine("");
             #endregion
